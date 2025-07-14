@@ -1,0 +1,470 @@
+---
+title: "Análisis REDICE25"
+author: "David Leiva"
+date: "2025-07-14"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(emmeans)
+library(lme4)
+library(nlme)
+library(tidyverse)
+library(patchwork)
+library(kableExtra)
+library(apaTables)
+```
+
+```{r}
+par(mar=c(.5,.5,0.1,.1))
+load('datoscompletos.RData')
+```
+
+# Modelos para perfiles motivacionales
+
+```{r}
+### Amotivation
+
+tempdat <- datoscompletos %>% 
+  select(ID,paste('Amotiv_',1:14,sep=''),clusters) %>% 
+  gather(Amotivation,measure,-c(ID,clusters)) %>%
+  mutate(Register=str_split(Amotivation,'_') %>% map_chr(.,2) %>% as.numeric()) %>% 
+  select(ID,measure,Register,clusters) %>% arrange(ID)
+
+vfopt <- varIdent(form=~1|clusters)
+
+mod.E2 <- lme(fixed=measure~1+poly(Register,2,raw=TRUE)*clusters,random=~Register|ID,data=tempdat,
+              weights=vfopt,na.action=na.exclude,control=list('optim'))
+
+ls.tabla <- data.frame(summary(lsmeans(mod.E2, pairwise~clusters*Register,at=list(Register=c(1,2,3,4,5,6,7,8,9,10,11,12,13,14)),
+                                       data=tempdat,params=list(weights=vfopt),adjust="tukey"))$lsmeans[c('Register','clusters',
+                                                                                                          'lsmean','lower.CL','upper.CL')])
+
+pa <- ggplot(ls.tabla, aes(x=Register, y=lsmean, linetype=clusters)) + 
+  geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL),
+                width = 0.2,col="#035AA6") +
+  geom_line(col="#035AA6") +
+  geom_point(aes(y = lsmean), size = 3, 
+             shape = 21, col="#035AA6",fill = "white") +
+  labs(x = "Setmana", y = bquote("Mitjana" %+-% "2EE"),
+       title = "Amotivació",linetype='Grup') +
+  theme_bw() +
+  theme(plot.title = element_text(colour = "#035AA6",face='bold')) +
+  scale_x_continuous(breaks=c(1:14),
+                     labels=paste0(1:14)) +
+  scale_linetype_discrete(name='Grup',breaks=c('A','B'),
+                          labels=paste0(c('A','B'),' (n = ',table(datoscompletos$clusters),')')) +  
+  theme(legend.position="bottom")
+
+# Extrinsic material regulation
+
+tempdat <- datoscompletos %>% 
+  select(ID,paste('ExtrinsRM_',1:14,sep=''),clusters) %>% 
+  gather(ExtrinsRM,measure,-c(ID,clusters)) %>%
+  mutate(Register=str_split(ExtrinsRM,'_') %>% map_chr(.,2) %>% as.numeric()) %>% 
+  select(ID,measure,Register,clusters) %>% arrange(ID)
+
+mod.D2 <- gls(measure~1+poly(Register,2,raw=TRUE)+clusters,data=tempdat,method='ML',
+              weights=vfopt,na.action=na.exclude,control=list('optim'))
+
+ls.tabla <- data.frame(summary(lsmeans(mod.D2, pairwise~clusters*Register,at=list(Register=c(1,2,3,4,5,6,7,8,9,10,11,12,13,14)),
+                                       data=tempdat,params=list(weights=vfopt),adjust="tukey"))$lsmeans[c('Register','clusters',
+                                                                                                          'lsmean','lower.CL','upper.CL')])
+
+pb <- ggplot(ls.tabla, aes(x=Register, y=lsmean, linetype=clusters)) + 
+  geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL),
+                width = 0.2,col="#035AA6") +
+  geom_line(col="#035AA6") +
+  geom_point(aes(y = lsmean), size = 3, 
+             shape = 21, col="#035AA6",fill = "white") +
+  labs(x = "Setmana", y = bquote("Mitjana" %+-% "2EE"),
+       title = "Regulació Extrínseca: Material") +
+  theme_bw() +
+  theme(plot.title = element_text(colour = "#035AA6",face='bold')) +  
+  scale_x_continuous(breaks=c(1:14),
+                     labels=paste0(1:14)) +
+  scale_linetype_discrete(name='Grup',breaks=c('A','B'),
+                          labels=paste0(c('A','B'),' (n = ',table(datoscompletos$clusters),')')) +  
+  theme(legend.position="bottom")
+
+# Social extrinsic regulation
+
+tempdat <- datoscompletos %>% 
+  select(ID,paste('ExtrinsRS_',1:14,sep=''),clusters) %>% 
+  gather(ExtrinsRS,measure,-c(ID,clusters)) %>%
+  mutate(Register=str_split(ExtrinsRS,'_') %>% map_chr(.,2) %>% as.numeric()) %>% 
+  select(ID,measure,Register,clusters) %>% arrange(ID)
+
+mod.D2 <- lme(fixed=measure~1+poly(Register,2,raw=TRUE)+clusters,random=~Register|ID,data=tempdat,
+              weights=vfopt,na.action=na.exclude,control=list('optim'))
+
+ls.tabla <- data.frame(summary(lsmeans(mod.D2, pairwise~clusters*Register,at=list(Register=c(1,2,3,4,5,6,7,8,9,10,11,12,13,14)),
+                                       data=tempdat,params=list(weights=vfopt),adjust="tukey"))$lsmeans[c('Register','clusters',
+                                                                                                          'lsmean','lower.CL','upper.CL')])
+
+pc <- ggplot(ls.tabla, aes(x=Register, y=lsmean, linetype=clusters)) + 
+  geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL),
+                width = 0.2,col="#035AA6") +
+  geom_line(col="#035AA6") +
+  geom_point(aes(y = lsmean), size = 3, 
+             shape = 21, col="#035AA6",fill = "white") +
+  labs(x = "Setmana", y = bquote("Mitjana" %+-% "2EE"),
+       title = "Regulació Extrínseca: Social",linetype='Grup') +
+  theme_bw() +
+  theme(plot.title = element_text(colour = "#035AA6",face='bold')) +  
+  scale_x_continuous(breaks=c(1:14),
+                     labels=paste0(1:14)) +
+  scale_linetype_discrete(name='Grup',breaks=c('A','B'),
+                          labels=paste0(c('A','B'),' (n = ',table(datoscompletos$clusters),')')) +  
+  theme(legend.position="bottom")
+
+# Identified regulation
+
+tempdat <- datoscompletos %>% 
+  select(ID,paste('Identif_',1:14,sep=''),clusters) %>% 
+  gather(Identif,measure,-c(ID,clusters)) %>%
+  mutate(Register=str_split(Identif,'_') %>% map_chr(.,2) %>% as.numeric()) %>% 
+  select(ID,measure,Register,clusters) %>% arrange(ID)
+
+mod.E2 <- lme(fixed=measure~1+poly(Register,2,raw=TRUE)*clusters,random=~Register|ID,data=tempdat,
+              weights=vfopt,na.action=na.exclude,control=list('optim'))
+
+ls.tabla <- data.frame(summary(lsmeans(mod.E2, pairwise~clusters*Register,at=list(Register=c(1,2,3,4,5,6,7,8,9,10,11,12,13,14)),
+                                       data=tempdat,params=list(weights=vfopt),adjust="tukey"))$lsmeans[c('Register','clusters',
+                                                                                                          'lsmean','lower.CL','upper.CL')])
+
+pd <- ggplot(ls.tabla, aes(x=Register, y=lsmean, linetype=clusters)) + 
+  geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL),
+                width = 0.2,col="#035AA6") +
+  geom_line(col="#035AA6") +
+  geom_point(aes(y = lsmean), size = 3, 
+             shape = 21, col="#035AA6",fill = "white") +  labs(x = "Setmana", y = bquote("Mitjana" %+-% "2EE"),
+       title = "Regulació identificada",linetype='Grup') +
+  theme_bw() +
+  theme(plot.title = element_text(colour = "#035AA6",face='bold')) +  
+  scale_x_continuous(breaks=c(1:14),
+                     labels=paste0(1:14)) +
+  scale_linetype_discrete(name='Grup',breaks=c('A','B'),
+                          labels=paste0(c('A','B'),' (n = ',table(datoscompletos$clusters),')')) +  
+  theme(legend.position="bottom")
+
+# Intrinsic motivation
+
+tempdat <- datoscompletos %>% 
+  select(ID,paste('Intrins_',1:14,sep=''),clusters) %>% 
+  gather(Intrins,measure,-c(ID,clusters)) %>%
+  mutate(Register=str_split(Intrins,'_') %>% map_chr(.,2) %>% as.numeric()) %>% 
+  select(ID,measure,Register,clusters) %>% arrange(ID)
+
+mod.D2 <- lme(fixed=measure~1+poly(Register,2,raw=TRUE)+clusters,random=~poly(Register,2,raw=TRUE)|ID,data=tempdat,
+              weights=vfopt,na.action=na.exclude,control=list('optim'))
+
+ls.tabla <- data.frame(summary(lsmeans(mod.D2, pairwise~clusters*Register,at=list(Register=c(1,2,3,4,5,6,7,8,9,10,11,12,13,14)),
+                                       data=tempdat,params=list(weights=vfopt),adjust="tukey"))$lsmeans[c('Register','clusters',
+                                                                                                          'lsmean','lower.CL','upper.CL')])
+
+pe <- ggplot(ls.tabla, aes(x=Register, y=lsmean, linetype=clusters)) + 
+  geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL),
+                width = 0.2,col="#035AA6") +
+  geom_line(col="#035AA6") +
+  geom_point(aes(y = lsmean), size = 3, 
+             shape = 21, col="#035AA6",fill = "white") +
+  labs(x = "Setmana", y = bquote("Mitjana" %+-% "2EE"),
+       title = "Motivació Intrínsica",linetype='Grup') +
+  theme_bw() +
+  theme(plot.title = element_text(colour = "#035AA6",face='bold')) +  
+  scale_x_continuous(breaks=c(1:14),
+                     labels=paste0(1:14)) +
+  scale_linetype_discrete(name='Grup',breaks=c('A','B'),
+                          labels=paste0(c('A','B'),' (n = ',table(datoscompletos$clusters),')')) +  
+  theme(legend.position="bottom")
+
+# Introjected regulation
+
+tempdat <- datoscompletos %>% 
+  select(ID,paste('Introject_',1:14,sep=''),clusters) %>% 
+  gather(RendPerc,measure,-c(ID,clusters)) %>%
+  mutate(Register=str_split(RendPerc,'_') %>% map_chr(.,2) %>% as.numeric()) %>% 
+  select(ID,measure,Register,clusters) %>% arrange(ID)
+
+mod.E <- lme(fixed=measure~1+poly(Register,2,raw=TRUE)*clusters,random=~poly(Register,2,raw=TRUE)|ID,data=tempdat,
+              na.action=na.exclude,control=list('optim'))
+
+ls.tabla <- data.frame(summary(lsmeans(mod.E, pairwise~clusters*Register,at=list(Register=c(1,2,3,4,5,6,7,8,9,10,11,12,13,14)),
+                                       data=tempdat,params=list(weights=vfopt),adjust="tukey"))$lsmeans[c('Register','clusters',
+                                                                                                          'lsmean','lower.CL','upper.CL')])
+
+pf <- ggplot(ls.tabla, aes(x=Register, y=lsmean, linetype=clusters)) + 
+  geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL),
+                width = 0.2,col="#035AA6") +
+  geom_line(col="#035AA6") +
+  geom_point(aes(y = lsmean), size = 3, 
+             shape = 21, col="#035AA6",fill = "white") +
+  labs(x = "Setmana", y = bquote("Mitjana" %+-% "2EE"),
+       title = "Regulació Introjectada",linetype='Grup') +
+  theme_bw() +
+  theme(plot.title = element_text(colour = "#035AA6",face='bold')) +  
+  scale_x_continuous(breaks=c(1:14),
+                     labels=paste0(1:14)) +
+  scale_linetype_discrete(name='Grup',breaks=c('A','B'),
+                          labels=paste0(c('A','B'),' (n = ',table(datoscompletos$clusters),')')) +  
+  theme(legend.position="bottom")
+```
+
+```{r}
+(pa + pe) /
+(pd + pf) /
+(pb + pc) + 
+plot_layout(guides = "collect") & 
+  theme(legend.position="bottom")
+
+ggsave("plotDEF.jpeg", 
+       width = 12, height = 8, units = "in", dpi = 300)
+```
+
+```{r}
+(pd + pf) +
+plot_layout(guides = "collect") & 
+  theme(legend.position="bottom")
+
+ggsave("plot2.jpeg", 
+       width = 12, height = 8, units = "in", dpi = 300)
+```
+
+```{r}
+(pb + pc) +
+plot_layout(guides = "collect") & 
+  theme(legend.position="bottom")
+
+ggsave("plot3.jpeg", 
+       width = 12, height = 8, units = "in", dpi = 300)
+```
+
+# Perfiles y rendimiento subjetivo
+
+```{r}
+tempdat <- datoscompletos %>% 
+  select(ID,paste('RendPerc_',1:14,sep=''),clusters) %>% 
+  gather(RendPerc,measure,-c(ID,clusters)) %>%
+  mutate(Register=str_split(RendPerc,'_') %>% map_chr(.,2) %>% as.numeric()) %>% 
+  select(ID,measure,Register,clusters) %>% arrange(ID)
+
+vfopt <- varIdent(form=~1|clusters)
+
+mod.D2 <- lme(fixed=measure~1+poly(Register,2,raw=TRUE)+clusters,random=~Register|ID,data=tempdat,
+              weights=vfopt,na.action=na.exclude,control=list('optim'))
+
+
+ls.tabla <- data.frame(summary(lsmeans(mod.D2, pairwise~clusters*Register,at=list(Register=c(1,2,3,4,5,6,7,8,9,10,11,12,13,14)),
+                                       data=tempdat,params=list(weights=vfopt),adjust="tukey"))$lsmeans[c('Register','clusters',
+                                                                                                          'lsmean','lower.CL','upper.CL')])
+
+pg <- ggplot(ls.tabla, aes(x=Register, y=lsmean, linetype=clusters)) + 
+  geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL),
+                width = 0.2,col="#FF7518") +
+  geom_line(col="#FF7518") +
+  geom_point(aes(y = lsmean), size = 3, 
+             shape = 21, col="#FF7518",fill = "white") +
+  labs(x = "Semana", y = bquote("Media" %+-% "2EE"),
+       title = "Rendimiento Subjetivo",linetype='Grupo') +
+  theme_bw() +
+  theme(plot.title = element_text(colour = "black",face='bold')) +  
+  scale_x_continuous(breaks=c(1:14),
+                     labels=paste0(1:14)) +
+  scale_linetype_discrete(name='Grupo',breaks=c('A','B'),
+                          labels=paste0(c('A','B'),' (n = ',table(datoscompletos$clusters),')')) +  
+  theme(legend.position="bottom")
+
+pg
+
+ggsave("plot6.jpeg", 
+       width = 12, height = 8, units = "in", dpi = 300)
+
+```
+
+
+# Modelos para asistencia/actividad
+
+```{r}
+### Ausencias acumuladas
+
+tempdat <- datoscompletos %>% 
+  select(ID,paste('AcumAbs_',1:14,sep=''),clusters) %>% 
+  gather(AcumAbs,measure,-c(ID,clusters)) %>%
+  mutate(Register=str_split(AcumAbs,'_') %>% map_chr(.,2) %>% as.numeric()) %>% 
+  select(ID,measure,Register,clusters) %>% arrange(ID)
+
+vfopt <- varIdent(form=~1|clusters)
+
+mod.E2 <- lme(fixed=measure~1+poly(Register,2,raw=TRUE)*clusters,random=~Register|ID,data=tempdat,
+              weights=vfopt,na.action=na.exclude,control=list('optim'))
+
+ls.tabla <- data.frame(summary(lsmeans(mod.E2, pairwise~clusters*Register,at=list(Register=c(1,2,3,4,5,6,7,8,9,10,11,12,13,14)),
+                                       data=tempdat,params=list(weights=vfopt),adjust="tukey"))$lsmeans[c('Register','clusters',
+                                                                                                          'lsmean','lower.CL','upper.CL')])
+
+ph <- ggplot(ls.tabla, aes(x=Register, y=lsmean, linetype=clusters)) + 
+  geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL),
+                width = 0.2,col="#FF7518") +
+  geom_line(col="#FF7518") +
+  geom_point(aes(y = lsmean), size = 3, 
+             shape = 21, col="#FF7518",fill = "white") +
+  labs(x = "Semana", y = bquote("Media" %+-% "2EE"),
+       title = "Ausencias acumuladas",linetype='Grupo') +
+  theme_bw() +
+  theme(plot.title = element_text(colour = "black",face='bold')) +
+  scale_x_continuous(breaks=c(1:14),
+                     labels=paste0(1:14)) +
+  scale_linetype_discrete(name='Grupo',breaks=c('A','B','C'),
+                          labels=paste0(c('A','B','C'),' (n = ',table(datoscompletos$clusters),')')) +  
+  theme(legend.position="bottom")
+
+### Nº conexiones
+
+tempdat <- datoscompletos %>% 
+  select(ID,paste('n_conexiones_w',1:14,sep=''),clusters) %>% 
+  gather(Conex,measure,-c(ID,clusters)) %>%
+  mutate(Register=str_split(Conex,'_w') %>% map_chr(.,2) %>% as.numeric()) %>% 
+  select(ID,measure,Register,clusters) %>% arrange(ID)
+
+vfopt <- varIdent(form=~1|clusters)
+
+mod.E2 <- lme(fixed=measure~1+poly(Register,2,raw=TRUE)*clusters,random=~Register|ID,data=tempdat,
+              weights=vfopt,na.action=na.exclude,control=list('optim'))
+
+ls.tabla <- data.frame(summary(lsmeans(mod.E2, pairwise~clusters*Register,at=list(Register=c(1,2,3,4,5,6,7,8,9,10,11,12,13,14)),
+                                       data=tempdat,params=list(weights=vfopt),adjust="tukey"))$lsmeans[c('Register','clusters',
+                                                                                                          'lsmean','lower.CL','upper.CL')])
+
+pi <- ggplot(ls.tabla, aes(x=Register, y=lsmean, linetype=clusters)) + 
+  geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL),
+                width = 0.2,col="#FF7518") +
+  geom_line(col="#FF7518") +
+  geom_point(aes(y = lsmean), size = 3, 
+             shape = 21, col="#FF7518",fill = "white") +
+  labs(x = "Semana", y = bquote("Media" %+-% "2EE"),
+       title = "# conexiones",linetype='Grupo') +
+  theme_bw() +
+  theme(plot.title = element_text(colour = "black",face='bold')) +
+  scale_x_continuous(breaks=c(1:14),
+                     labels=paste0(1:14)) +
+  scale_linetype_discrete(name='Grupo',breaks=c('A','B','C'),
+                          labels=paste0(c('A','B','C'),' (n = ',table(datoscompletos$clusters),')')) +  
+  theme(legend.position="bottom")
+
+### Tiempo medio entre conexiones
+
+tempdat <- datoscompletos %>% 
+  select(ID,paste('tiempo_medio_min_w',1:14,sep=''),clusters) %>% 
+  gather(Tiempo,measure,-c(ID,clusters)) %>%
+  mutate(Register=str_split(Tiempo,'_w') %>% map_chr(.,2) %>% as.numeric()) %>% 
+  select(ID,measure,Register,clusters) %>% arrange(ID)
+
+vfopt <- varIdent(form=~1|clusters)
+
+mod.E2 <- lme(fixed=measure~1+poly(Register,2,raw=TRUE)*clusters,random=~1|ID,data=tempdat,
+              weights=vfopt,na.action=na.exclude,control=list('optim'))
+
+ls.tabla <- data.frame(summary(lsmeans(mod.E2, pairwise~clusters*Register,at=list(Register=c(1,2,3,4,5,6,7,8,9,10,11,12,13,14)),
+                                       data=tempdat,params=list(weights=vfopt),adjust="tukey"))$lsmeans[c('Register','clusters',
+                                                                                                          'lsmean','lower.CL','upper.CL')])
+
+pj <- ggplot(ls.tabla, aes(x=Register, y=lsmean, linetype=clusters)) + 
+  geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL),
+                width = 0.2,col="#FF7518") +
+  geom_line(col="#FF7518") +
+  geom_point(aes(y = lsmean), size = 3, 
+             shape = 21, col="#FF7518",fill = "white") +
+  labs(x = "Semana", y = bquote("Media" %+-% "2EE"),
+       title = "Tiempo entre conexiones",linetype='Grupo') +
+  theme_bw() +
+  theme(plot.title = element_text(colour = "black",face='bold')) +
+  scale_x_continuous(breaks=c(1:14),
+                     labels=paste0(1:14)) +
+  scale_linetype_discrete(name='Grupo',breaks=c('A','B','C'),
+                          labels=paste0(c('A','B','C'),' (n = ',table(datoscompletos$clusters),')')) +  
+  theme(legend.position="bottom")
+```
+
+```{r}
+(ph + pi) +  
+plot_layout(guides = "collect") & 
+  theme(legend.position="bottom")
+
+ggsave("plot4.jpeg", 
+       width = 12, height = 8, units = "in", dpi = 300)
+```
+
+```{r echo=FALSE,warning=FALSE,message=FALSE,fig.height=10,fig.width=12}
+
+ggplot(datoscompletos,aes(x=clusters,y=Nota)) +
+  geom_boxplot(fill='#FF7518', alpha=.3,outliers=FALSE) +
+  geom_jitter(alpha=.2,width = 0.15, height = 0.15) +
+  labs(x='',y='',title='') +
+  theme_bw() + theme(axis.text.x = element_text(face="bold", size=10),
+          axis.text.y = element_text(face="bold",size=10)) + ylim(0,10)
+
+ggsave("plot5.jpeg", 
+       width = 12, height = 8, units = "in", dpi = 300)
+```
+
+# Comparación de clústers: Rendimiento subjetibo, absentismo y razones de absentismo
+
+```{r}
+
+options(OutDec=',')
+
+vars2Crear <- colnames(datoscompletos)[c(188:194,185)][c(8,7,1:6)]
+
+prueba <- vector()
+ICi <- vector()
+ICs <- vector()
+
+for(i in 1:length(vars2Crear)){
+  temp <-t.test(as.formula(paste(vars2Crear[i],'~clusters',sep='')),data=datoscompletos)
+  prueba[i] <- paste0(round(temp$statistic,3),' (',round(temp$parameter),'); ',ifelse(temp$p.value<.001,'<0,001',ifelse(temp$p.value<.01,'<0,01',
+                                             ifelse(temp$p.value<.05,'<0,05',paste(round(temp$p.value,2),sep='')))))
+  ICi[i] <- round(temp$conf.int[1],2)
+  ICs[i] <- round(temp$conf.int[2],2)
+}
+
+mymean <- function(x,...){
+  round(mean(x,...),2)
+}
+
+mysd <- function(x,...){
+  round(sd(x,...),2)
+}
+
+RESULTADOS <- 
+cbind(t(doBy::summaryBy(as.formula(paste(paste(vars2Crear,collapse=' + '),'~clusters',sep='')),FUN=mymean,na.rm=TRUE,data=datoscompletos)[,-1]),
+t(doBy::summaryBy(as.formula(paste(paste(vars2Crear,collapse=' + '),'~clusters',sep='')),FUN=mysd,na.rm=TRUE,data=datoscompletos)[-1]),prueba,ICi,ICs)[,c(1,3,2,4,5,6,7)]
+rownames(RESULTADOS) <- c('Rend. objetivo','Rend. percibido','Absentismo','Planificación','M. docente','M. aprendizaje','P. Curso','F. externos')
+colnames(RESULTADOS) <- c(rep(c('M','DT'),2),'t (gl); p valor','Límite inf.','Límite sup.')
+RESULTADOS %>% kable() %>% kable_styling("striped") %>%
+  add_header_above(c("","Grupo A" = 2, "Grupo B" = 2,"Prueba" = 1, "IC95% diferencia"=2),color="black")  %>% 
+column_spec(1, color = "black")   %>% 
+row_spec(0, color = "black")
+```
+
+
+# Modelo predictivo del rendimiento objetivo: Clústering motivacional
+
+```{r}
+mod1 <- lm(Nota~clusters,na.omit(datoscompletos[,c('Nota','clusters','clustersACTIV')]))
+
+mod2 <- lm(Nota~clusters+clustersACTIV,na.omit(datoscompletos[,c('Nota','clusters','clustersACTIV')]))
+
+apa.reg.table(mod1,mod2,filename="tablaREG.doc")
+```
+
+# Modelo predictivo del rendimiento subjetivo: Clústering motivacional
+
+```{r}
+mod1 <- lm(totRENDPERC~clusters,na.omit(datoscompletos[,c('totRENDPERC','clusters','clustersACTIV')]))
+
+mod2 <- lm(totRENDPERC~clusters+clustersACTIV,na.omit(datoscompletos[,c('totRENDPERC','clusters','clustersACTIV')]))
+
+apa.reg.table(mod1,mod2,filename="tablaREG2.doc")
+```
